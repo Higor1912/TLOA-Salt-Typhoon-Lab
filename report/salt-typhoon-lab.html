@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salt Typhoon – Home Lab Simulation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #0a0c10;
+    --surface:   #0f1318;
+    --border:    #1e2530;
+    --border2:   #2a3340;
+    --accent:    #00c8ff;
+    --accent2:   #ff6b35;
+    --accent3:   #7cfc8a;
+    --warn:      #f0c040;
+    --danger:    #ff4444;
+    --text:      #c8d4e0;
+    --text-dim:  #6b7f94;
+    --text-head: #e8f0f8;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 36px 48px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse 60% 80% at 70% 50%, rgba(0,200,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .header-meta span { color: var(--text-dim); }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(20px, 3vw, 30px);
+    font-weight: 700;
+    color: var(--text-head);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 13px;
+    max-width: 640px;
+  }
+
+  /* ── LAYOUT ── */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 48px 64px;
+  }
+
+  /* ── SECTION TITLES ── */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  h2 {
+    font-family: var(--mono);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-head);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent3);
+    margin: 22px 0 10px;
+  }
+  h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--warn);
+    font-family: var(--mono);
+    margin: 16px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── BLOCKS ── */
+  .block { margin-bottom: 48px; }
+
+  p { margin-bottom: 12px; color: var(--text); }
+
+  /* ── GRID ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media(max-width:680px){ .grid-2{ grid-template-columns:1fr; } }
+
+  /* ── INFO CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 20px;
+  }
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+
+  /* ── CTI BOX ── */
+  .cti-box {
+    background: rgba(0,200,255,0.04);
+    border: 1px solid rgba(0,200,255,0.2);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 18px 22px;
+    margin-bottom: 20px;
+  }
+  .cti-box .cti-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  /* ── PHASE CARD ── */
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+  .phase-header {
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .phase-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 60px;
+  }
+  .phase-title {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-head);
+    flex: 1;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.08em;
+  }
+  .badge-mitre {
+    background: rgba(124,252,138,0.1);
+    color: var(--accent3);
+    border: 1px solid rgba(124,252,138,0.25);
+  }
+  .badge-low { background: rgba(0,200,255,0.1); color: var(--accent); border: 1px solid rgba(0,200,255,0.25); }
+  .badge-med { background: rgba(240,192,64,0.1); color: var(--warn); border: 1px solid rgba(240,192,64,0.25); }
+  .badge-high { background: rgba(255,68,68,0.1); color: var(--danger); border: 1px solid rgba(255,68,68,0.25); }
+  .badge-none { background: rgba(107,127,148,0.1); color: var(--text-dim); border: 1px solid rgba(107,127,148,0.25); }
+
+  .phase-body { padding: 20px; }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: #070a0e;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 18px;
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+  .code-block .cb-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cb-dot { width:8px; height:8px; border-radius:50%; }
+  .cb-dot-ps  { background:#5b9bd5; }
+  .cb-dot-cmd { background:#d4a017; }
+  .cb-dot-log { background:var(--accent3); }
+  .cb-dot-sig { background:var(--danger); }
+  pre {
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .kw  { color: #79b8ff; }
+  .str { color: #9ecbff; }
+  .cmd { color: var(--accent3); }
+  .cmt { color: #4a5568; font-style: italic; }
+  .val { color: var(--warn); }
+  .evid{ color: var(--accent2); }
+  .alert-yes { color: var(--accent3); }
+  .alert-no  { color: var(--danger); }
+
+  /* ── DETECTION TABLE ── */
+  .detect-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+    margin: 14px 0;
+  }
+  .detect-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    font-size: 10px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border2);
+  }
+  .detect-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  .detect-table tr:last-child td { border-bottom: none; }
+
+  /* ── HUNT HYPOTHESES ── */
+  .hunt-card {
+    background: rgba(255,107,53,0.05);
+    border: 1px solid rgba(255,107,53,0.2);
+    border-left: 3px solid var(--accent2);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .hunt-h { font-family:var(--mono); font-size:11px; color:var(--accent2); margin-bottom:8px; letter-spacing:0.08em; text-transform:uppercase; }
+  .hunt-hyp { font-size:13px; color:var(--text-head); margin-bottom:10px; font-weight:500; }
+
+  /* ── GAP TABLE ── */
+  .gap-row-none td:first-child::before { content:'✗ '; color:var(--danger); }
+  .gap-row-partial td:first-child::before { content:'△ '; color:var(--warn); }
+  .gap-row-yes td:first-child::before { content:'✓ '; color:var(--accent3); }
+
+  /* ── CONCLUSION ── */
+  .conclusion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  @media(max-width:680px){ .conclusion-grid{ grid-template-columns:1fr; } }
+  .concl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+  }
+  .concl-num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .concl-label { font-size: 11px; color: var(--text-dim); }
+
+  /* ── DIVIDER ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 48px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  ul { padding-left: 18px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-meta">
+    <span>TLOA Framework</span> ·
+    <span>Adversary Emulation</span> ·
+    <span>Salt Typhoon / TAG-22</span> ·
+    <span>Lab Report v1.0</span>
+  </div>
+  <h1>Simulando TTPs do <em>Salt Typhoon</em><br>em um Home Lab Active Directory</h1>
+  <p class="subtitle">Como operações de espionagem persistente se manifestam em ambientes AD monitorados por Wazuh e Sysmon — visibilidade, gaps e indicadores comportamentais para threat hunting.</p>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- CTI CONTEXT -->
+  <div class="block">
+    <div class="section-label">Contexto CTI</div>
+    <h2>Quem é o Salt Typhoon?</h2>
+
+    <div class="cti-box">
+      <div class="cti-label">⬡ Threat Actor Intelligence</div>
+      <p>Salt Typhoon (também rastreado como GhostEmperor, FamousSparrow e UNC2286) é um grupo APT vinculado ao Ministério de Segurança do Estado (MSS) da China. Ativo desde pelo menos 2019, opera com foco em <strong>espionagem de longo prazo</strong> contra telecomunicações, governo e infraestrutura crítica. Em 2024, o CISA emitiu advisory confirmando comprometimento de múltiplas operadoras de telecomunicações norte-americanas (AT&T, Verizon, T-Mobile), com acesso mantido por meses sem detecção.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Características Operacionais</div>
+        <ul>
+          <li>Preferência por Living Off the Land (LOTL)</li>
+          <li>Abuso de credenciais válidas (T1078)</li>
+          <li>Movimento lateral via protocolos nativos</li>
+          <li>Implantes customizados de longa duração</li>
+          <li>Exfiltração lenta e fracionada</li>
+          <li>Foco em persistência silenciosa vs. impacto imediato</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">TTPs Principais (MITRE)</div>
+        <ul>
+          <li><span class="badge badge-mitre">T1078</span> Credenciais Válidas</li>
+          <li><span class="badge badge-mitre">T1018</span> Remote System Discovery</li>
+          <li><span class="badge badge-mitre">T1046</span> Network Service Scanning</li>
+          <li><span class="badge badge-mitre">T1053</span> Scheduled Task/Job</li>
+          <li><span class="badge badge-mitre">T1087</span> Account Discovery</li>
+          <li><span class="badge badge-mitre">T1059.001</span> PowerShell</li>
+        </ul>
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:var(--text-dim);">
+      Fontes: CISA Advisory AA24-038A (fev/2024) · Mandiant M-Trends 2024 · Microsoft MSTIC Salt Typhoon tracking · CrowdStrike Adversary Profile
+    </p>
+  </div>
+
+  <!-- AMBIENTE -->
+  <div class="block">
+    <div class="section-label">Infraestrutura</div>
+    <h2>Ambiente de Laboratório</h2>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Topologia</div>
+        <pre style="font-size:11px; color:var(--text-dim); line-height:1.8">
+VMnet1 — 192.168.204.0/24
+├── DC01      Windows Server 2025
+│   └── Domain: tloa.local
+├── WS01      Windows 10
+├── Kali      Attacker / Red Team
+└── Wazuh     Ubuntu 22.04 (SIEM)
+        </pre>
+      </div>
+      <div class="card">
+        <div class="card-title">Ferramentas de Detecção</div>
+        <ul>
+          <li><strong>Wazuh 4.7.5</strong> — SIEM/HIDS</li>
+          <li><strong>Sysmon v15</strong> — telemetria de processo</li>
+          <li>Regras customizadas TLOA Framework</li>
+          <li>Windows Event Forwarding habilitado</li>
+          <li>Audit Policy configurada (success + failure)</li>
+        </ul>
+        <br>
+        <div class="card-title">Contas Simuladas</div>
+        <ul>
+          <li><code>tloa\administrador</code> — DA comprometido</li>
+          <li><code>tloa\svc_backup</code> — service account abusada</li>
+          <li><code>tloa\jsmith</code> — usuário padrão</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="cti-box" style="border-color: rgba(240,192,64,0.3); background: rgba(240,192,64,0.04);">
+      <div class="cti-label" style="color:var(--warn);">⚠ Nota de Design</div>
+      <p>Este lab usa o Windows Server 2025, que deprecou RC4 por padrão e exige SMB signing. Isso bloqueia técnicas legadas como Kerberoasting clássico e Pass-the-Hash via SMB não assinado — documentado como achado, não como falha do exercício. O Salt Typhoon real adapta tooling ao ambiente; a simulação reflete isso.</p>
+    </div>
+  </div>
+
+  <!-- FASE 1 -->
+  <div class="block">
+    <div class="section-label">Fase 01 / 06</div>
+    <h2>Reconhecimento Interno</h2>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">FASE 01</span>
+        <span class="phase-title">Remote System Discovery & Network Scanning</span>
+        <span class="badge badge-mitre">T1018</span>
+        <span class="badge badge-mitre">T1046</span>
+        <span class="badge badge-low">Ruído: Baixo</span>
+      </div>
+      <div class="phase-body">
+        <p>O objetivo desta fase é mapear o ambiente sem gerar assinaturas de malware. O Salt Typhoon prefere ferramentas nativas do Windows para enumerar hosts, shares e controladores de domínio. O operador estabeleceu foothold inicial via RDP com credenciais válidas roubadas (simuladas como <code>tloa\jsmith</code>).</p>
+
+        <h3>Comandos Executados</h3>
+
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-cmd"></span>PowerShell — Descoberta de DCs e hosts</div>
+          <pre><span class="cmt"># Enumerar todos os DCs do domínio</span>
+<span class="cmd">nltest</span> <span class="kw">/dclist:tloa.local</span>
+
+<span class="cmt"># Listar hosts via DNS</span>
+<span class="cmd">nslookup</span> <span class="str">-type=SRV _ldap._tcp.tloa.local</span>
+
+<span class="cmt"># Descoberta de hosts via ping sweep (LOTL)</span>
+<span class="kw">1..254 | ForEach-Object {</span>
+    <span class="str">$ip = "192.168.204.$_"</span>
+    <span class="kw">if</span> (<span class="cmd">Test-Connection</span> <span class="kw">-ComputerName</span> <span class="str">$ip</span> <span class="kw">-Count</span> <span class="val">1</span> <span class="kw">-Quiet</span> <span class="kw">-TimeoutSeconds</span> <span class="val">1</span>) {
+        <span class="cmd">Write-Output</span> <span class="str">"ALIVE: $ip"</span>
+    }
+<span class="kw">}</span>
+
+<span class="cmt"># Enumerar shares em hosts descobertos</span>
+<span class="cmd">net view</span> <span class="str">\\192.168.204.10</span> <span class="kw">/all</span>
+<span class="cmd">Get-SmbShare</span> <span class="kw">-CimSession</span> DC01</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-cmd"></span>Port Scan via PowerShell (sem Nmap)</div>
+          <pre><span class="cmt"># Scan de portas críticas — nativo, sem ferramenta externa</span>
+<span class="str">$targets</span> = @(<span class="str">"192.168.204.10"</span>, <span class="str">"192.168.204.11"</span>)
+<span class="str">$ports</span>   = @(<span class="val">445</span>, <span class="val">389</span>, <span class="val">3389</span>, <span class="val">5985</span>, <span class="val">88</span>)
+
+<span class="kw">foreach</span> (<span class="str">$t</span> <span class="kw">in</span> <span class="str">$targets</span>) {
+    <span class="kw">foreach</span> (<span class="str">$p</span> <span class="kw">in</span> <span class="str">$ports</span>) {
+        <span class="str">$conn</span> = <span class="cmd">New-Object</span> System.Net.Sockets.TcpClient
+        <span class="str">$async</span> = <span class="str">$conn</span>.BeginConnect(<span class="str">$t</span>, <span class="str">$p</span>, <span class="kw">$null</span>, <span class="kw">$null</span>)
+        <span class="str">$wait</span>  = <span class="str">$async</span>.AsyncWaitHandle.WaitOne(<span class="val">300</span>, <span class="kw">$false</span>)
+        <span class="kw">if</span> (<span class="str">$wait</span>) { <span class="cmd">Write-Output</span> <span class="str">"OPEN: $t`:$p"</span> }
+        <span class="str">$conn</span>.Close()
+    }
+}</pre>
+        </div>
+
+        <h3>Eventos Gerados e Análise de Detecção</h3>
+
+        <table class="detect-table">
+          <tr>
+            <th>Evento</th>
+            <th>Origem</th>
+            <th>Descrição</th>
+            <th>Wazuh Alert</th>
+          </tr>
+          <tr>
+            <td>Sysmon EID 1</td>
+            <td>WS01</td>
+            <td>Criação de processo: <code>nltest.exe /dclist</code></td>
+            <td><span class="alert-yes">✓ Alerta</span></td>
+          </tr>
+          <tr>
+            <td>Sysmon EID 3</td>
+            <td>WS01</td>
+            <td>Conexão TCP em rajada para porta 445/389</td>
+            <td><span class="alert-no">✗ Silêncio</span></td>
+          </tr>
+          <tr>
+            <td>WinEvent 4688</td>
+            <td>WS01</td>
+            <td>PowerShell.exe spawnou processo filho</td>
+            <td><span class="alert-yes">△ Parcial</span></td>
+          </tr>
+          <tr>
+            <td>WinEvent 7045</td>
+            <td>DC01</td>
+            <td>Consulta LDAP anônima ao catálogo</td>
+            <td><span class="alert-no">✗ Silêncio</span></td>
+          </tr>
+        </table>
+
+        <div class="cti-box" style="margin-top:14px; border-color: rgba(255,68,68,0.25); background: rgba(255,68,68,0.04);">
+          <div class="cti-label" style="color:var(--danger);">Gap de Detecção</div>
+          <p>O scan de portas via TcpClient nativo gerou <strong>zero alertas no Wazuh</strong>. A telemetria do Sysmon (EID 3) registrou as conexões, mas a regra padrão não correlaciona volume de conexões TCP por processo em curto período. Um threshold customizado é necessário: ≥10 conexões TCP de um único processo em &lt;5s para hosts distintos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 2 -->
+  <div class="block">
+    <div class="section-label">Fase 02 / 06</div>
+    <h2>Living Off the Land (LOTL)</h2>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">FASE 02</span>
+        <span class="phase-title">Inventário do Ambiente via Ferramentas Nativas</span>
+        <span class="badge badge-mitre">T1059.001</span>
+        <span class="badge badge-mitre">T1082</span>
+        <span class="badge badge-low">Ruído: Mínimo</span>
+      </div>
+      <div class="phase-body">
+        <p>O Salt Typhoon evita dropping de binários externos ao máximo. Toda coleta de informações é feita com ferramentas já presentes no Windows. Esta fase representa o coração da dificuldade defensiva: o comportamento é idêntico ao de um administrador legítimo.</p>
+
+        <h3>Comandos Executados</h3>
+
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-ps"></span>PowerShell — Inventário de ambiente</div>
+          <pre><span class="cmt"># Informações do sistema e AD</span>
+<span class="cmd">Get-ADDomain</span>                          <span class="cmt"># estrutura do domínio</span>
+<span class="cmd">Get-ADForest</span>                          <span class="cmt"># florestas e trusts</span>
+<span class="cmd">Get-ADTrust</span> <span class="kw">-Filter</span> *               <span class="cmt"># relações de confiança</span>
+<span class="cmd">Get-ADComputer</span> <span class="kw">-Filter</span> * <span class="kw">-Properties</span> OperatingSystem, LastLogonDate
+
+<span class="cmt"># GPOs aplicadas — mapa de controles de segurança</span>
+<span class="cmd">Get-GPO</span> <span class="kw">-All</span> | <span class="cmd">Select-Object</span> DisplayName, GpoStatus, ModificationTime
+
+<span class="cmt"># Serviços em execução — alvos para persistência</span>
+<span class="cmd">Get-Service</span> | <span class="kw">Where-Object</span> { <span class="str">$_.Status</span> <span class="kw">-eq</span> <span class="str">'Running'</span> } | <span class="cmd">Select-Object</span> Name, DisplayName
+
+<span class="cmt"># Processos com path de executável — detecção de EDR</span>
+<span class="cmd">Get-Process</span> | <span class="cmd">Select-Object</span> Name, Id, Path | <span class="kw">Where-Object</span> { <span class="str">$_.Path</span> <span class="kw">-ne</span> <span class="kw">$null</span> }
+
+<span class="cmt"># Usuários ativos por workstation — padrão de uso</span>
+<span class="cmd">query user</span> <span class="kw">/server:</span>WS01</pre>
+        </div>
+
+        <h3>Por Que Isso é Difícil de Detectar</h3>
+        <table class="detect-table">
+          <tr><th>Comportamento</th><th>Legítimo?</th><th>Distinguível?</th></tr>
+          <tr><td><code>Get-ADComputer</code> executado por jsmith</td><td>Depende do papel</td><td>Somente por contexto de horário/frequência</td></tr>
+          <tr><td><code>Get-GPO -All</code> por conta não-admin</td><td>Leitura permitida por padrão</td><td>✗ Não sem baselining</td></tr>
+          <tr><td>PowerShell <code>-NonInteractive</code></td><td>Sim (scripts automatizados)</td><td>△ Correlação com logon recente</td></tr>
+          <tr><td><code>query user</code> em hosts remotos</td><td>Sim (helpdesk)</td><td>✗ Não em config default</td></tr>
+        </table>
+
+        <div class="cti-box" style="margin-top:14px; border-color: rgba(255,68,68,0.25); background: rgba(255,68,68,0.04);">
+          <div class="cti-label" style="color:var(--danger);">Gap de Detecção</div>
+          <p>Todos os comandos LOTL desta fase passaram <strong>sem nenhum alerta</strong> no Wazuh com configuração padrão. O Sysmon capturou os processos (EID 1), mas sem regras de correlação para "sequência de enumeração AD em menos de 10 minutos por conta não-privilegiada", o volume de eventos é tratado como ruído normal de ambiente.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 3 -->
+  <div class="block">
+    <div class="section-label">Fase 03 / 06</div>
+    <h2>Abuso de Credenciais Válidas</h2>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">FASE 03</span>
+        <span class="phase-title">Valid Accounts — Logon com Credenciais Comprometidas</span>
+        <span class="badge badge-mitre">T1078</span>
+        <span class="badge badge-med">Ruído: Médio</span>
+      </div>
+      <div class="phase-body">
+        <p>Esta é a TTP central do Salt Typhoon. Uma vez obtidas credenciais válidas (via phishing, credential stuffing ou compra em fóruns), o ator autentica-se como se fosse o usuário legítimo. O desafio defensivo é distinguir o acesso malicioso do legítimo quando as credenciais são as mesmas.</p>
+
+        <h3>Cenário Simulado</h3>
+        <p>Credenciais de <code>tloa\svc_backup</code> (service account) foram "obtidas" fora do horário comercial. O ator autentica via RDP para DC01 às 02:17 de uma workstation que normalmente não usa essa conta.</p>
+
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-log"></span>Windows Security Log — Eventos Críticos</div>
+          <pre><span class="cmt">── Evento 4624 — Logon Bem-Sucedido ──────────────────────</span>
+EventID:     <span class="val">4624</span>
+TimeCreated: <span class="evid">2024-03-15T02:17:43Z</span>   <span class="cmt">← fora do horário</span>
+Account:     <span class="evid">svc_backup</span>
+LogonType:   <span class="val">10</span>                        <span class="cmt">← RemoteInteractive (RDP)</span>
+WorkstationName: <span class="evid">KALI-ATTACK</span>          <span class="cmt">← host incomum</span>
+IpAddress:   <span class="evid">192.168.204.50</span>
+
+<span class="cmt">── Evento 4648 — Logon com Credenciais Explícitas ────────</span>
+EventID:     <span class="val">4648</span>
+Subject:     <span class="evid">svc_backup</span>
+TargetServer: <span class="evid">DC01.tloa.local</span>
+ProcessName: <span class="evid">C:\Windows\System32\mstsc.exe</span>
+
+<span class="cmt">── Evento 4672 — Privilégio Especial Atribuído ───────────</span>
+EventID:     <span class="val">4672</span>
+Account:     <span class="evid">svc_backup</span>
+Privileges:  <span class="evid">SeBackupPrivilege</span>         <span class="cmt">← permite ler arquivos protegidos</span>
+             <span class="evid">SeRestorePrivilege</span>
+             <span class="evid">SeTcbPrivilege</span></pre>
+        </div>
+
+        <h3>O Que Torna Este Acesso Suspeito</h3>
+        <table class="detect-table">
+          <tr><th>Indicador</th><th>Valor Normal</th><th>Valor Observado</th><th>Anomalia</th></tr>
+          <tr><td>Horário de logon</td><td>08:00–18:00</td><td>02:17</td><td><span class="alert-no">Alta</span></td></tr>
+          <tr><td>WorkstationName</td><td>WS01, WS02</td><td>KALI-ATTACK</td><td><span class="alert-no">Alta</span></td></tr>
+          <tr><td>LogonType</td><td>3 (Network)</td><td>10 (RDP)</td><td><span class="alert-no">Média</span></td></tr>
+          <tr><td>Target de serviço</td><td>Servidor de backup</td><td>DC01</td><td><span class="alert-no">Alta</span></td></tr>
+          <tr><td>Frequência</td><td>Agendado, previsível</td><td>Manual, ad-hoc</td><td><span class="alert-yes">Média</span></td></tr>
+        </table>
+
+        <div class="cti-box" style="margin-top:14px; border-color: rgba(240,192,64,0.3); background: rgba(240,192,64,0.04);">
+          <div class="cti-label" style="color:var(--warn);">Achado de Detecção</div>
+          <p>O Wazuh gerou alerta parcial no EID 4624 (regra genérica de logon fora de horário), mas <strong>não correlacionou</strong> os três eventos (4624 + 4648 + 4672) como uma cadeia suspeita. A combinação de LogonType=10 + WorkstationName incomum + SeBackupPrivilege em horário off-hours é um indicador composto que requer regra customizada de correlação.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 4 -->
+  <div class="block">
+    <div class="section-label">Fase 04 / 06</div>
+    <h2>Persistência via Scheduled Task</h2>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">FASE 04</span>
+        <span class="phase-title">Scheduled Task/Job — Persistência Silenciosa</span>
+        <span class="badge badge-mitre">T1053.005</span>
+        <span class="badge badge-med">Ruído: Médio-Baixo</span>
+      </div>
+      <div class="phase-body">
+        <p>O Salt Typhoon abusa de scheduled tasks para garantir reexecução de payloads após reboot ou reconnection. A técnica é especialmente eficaz porque tarefas agendadas são operação rotineira em ambientes Windows — o sinal se perde no ruído.</p>
+
+        <h3>Simulação</h3>
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-cmd"></span>CMD — Criação de Scheduled Task camuflada</div>
+          <pre><span class="cmt"># Tarefa com nome que imita manutenção legítima</span>
+<span class="cmd">schtasks</span> <span class="kw">/Create</span>
+  <span class="kw">/SC</span> DAILY
+  <span class="kw">/TN</span> <span class="str">"\Microsoft\Windows\Maintenance\SyncDiagnostics"</span>
+  <span class="kw">/TR</span> <span class="str">"powershell.exe -NonInteractive -WindowStyle Hidden -EncodedCommand [BASE64]"</span>
+  <span class="kw">/ST</span> <span class="val">03:00</span>
+  <span class="kw">/RU</span> <span class="str">SYSTEM</span>
+  <span class="kw">/F</span>
+
+<span class="cmt"># Verificação se tarefa foi criada</span>
+<span class="cmd">schtasks</span> <span class="kw">/Query</span> <span class="kw">/TN</span> <span class="str">"\Microsoft\Windows\Maintenance\SyncDiagnostics"</span> <span class="kw">/FO</span> LIST</pre>
+        </div>
+
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-log"></span>Windows Event Log — EID 4698, 4702</div>
+          <pre><span class="cmt">── Evento 4698 — Scheduled Task Criada ──────────────────</span>
+EventID:      <span class="val">4698</span>
+SubjectUser:  <span class="evid">svc_backup</span>
+TaskName:     <span class="evid">\Microsoft\Windows\Maintenance\SyncDiagnostics</span>
+TaskContent:
+  &lt;Exec&gt;
+    &lt;Command&gt;<span class="evid">powershell.exe</span>&lt;/Command&gt;
+    &lt;Arguments&gt;<span class="evid">-NonInteractive -WindowStyle Hidden -EncodedCommand JAB...</span>&lt;/Arguments&gt;
+  &lt;/Exec&gt;
+  &lt;Triggers&gt;
+    &lt;CalendarTrigger&gt;
+      &lt;StartBoundary&gt;<span class="evid">2024-03-15T03:00:00</span>&lt;/StartBoundary&gt;
+    &lt;/CalendarTrigger&gt;
+  &lt;/Triggers&gt;</pre>
+        </div>
+
+        <h3>Indicadores de Comprometimento</h3>
+        <ul>
+          <li>Task criada em namespace <code>\Microsoft\Windows\Maintenance\</code> por conta não-SYSTEM</li>
+          <li>Argumento <code>-EncodedCommand</code> (Base64) sem contexto de automação conhecida</li>
+          <li><code>-WindowStyle Hidden</code> combinado com <code>-NonInteractive</code></li>
+          <li>Horário de execução off-hours (03:00)</li>
+          <li>Conta criadora (<code>svc_backup</code>) logada de host incomum nas últimas 2h</li>
+        </ul>
+
+        <table class="detect-table" style="margin-top:14px">
+          <tr><th>Evento</th><th>Wazuh Default</th><th>Com Regra Customizada</th></tr>
+          <tr><td>EID 4698 (task criada)</td><td><span class="alert-yes">✓ Alerta genérico</span></td><td><span class="alert-yes">✓ + correlação com logon suspeito</span></td></tr>
+          <tr><td>Sysmon EID 1 (powershell -Encoded)</td><td><span class="alert-yes">✓ Alerta</span></td><td><span class="alert-yes">✓ + extração do payload B64</span></td></tr>
+          <tr><td>Execução em horário off-hours</td><td><span class="alert-no">✗ Sem correlação</span></td><td><span class="alert-yes">✓ Com timeline analysis</span></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 5 -->
+  <div class="block">
+    <div class="section-label">Fase 05 / 06</div>
+    <h2>Coleta e Enumeração de Contas</h2>
+
+    <div class="phase">
+      <div class="phase-header">
+        <span class="phase-num">FASE 05</span>
+        <span class="phase-title">Account Discovery — Mapeamento de Alvos de Alto Valor</span>
+        <span class="badge badge-mitre">T1087.002</span>
+        <span class="badge badge-low">Ruído: Baixo</span>
+      </div>
+      <div class="phase-body">
+        <p>Antes de qualquer movimento lateral, o ator mapeia contas de alto valor: membros de grupos privilegiados, service accounts com permissões elevadas, e contas com SPN (alvos de Kerberoasting). O objetivo é identificar o próximo passo de escalação.</p>
+
+        <div class="code-block">
+          <div class="cb-label"><span class="cb-dot cb-dot-ps"></span>PowerShell — Enumeração de grupos privilegiados</div>
+          <pre><span class="cmt"># Membros do Domain Admins</span>
+<span class="cmd">Get-ADGroupMember</span> <span class="kw">-Identity</span> <span class="str">"Domain Admins"</span> <span class="kw">-Recursive</span>
+
+<span class="cmt"># Enterprise Admins — controle de floresta</span>
+<span class="cmd">Get-ADGroupMember</span> <span class="kw">-Identity</span> <span class="str">"Enterprise Admins"</span> <span class="kw">-Recursive</span>
+
+<span class="cmt"># Service accounts com SPN — alvos de Kerberoasting</span>
+<span class="cmd">Get-ADUser</span> <span class="kw">-Filter</span> { ServicePrincipalName <span class="kw">-like</span> <span class="str">"*"</span> } <span class="kw">-Properties</span> ServicePrincipalName, PasswordLastSet, LastLogonDate
+
+<span class="cmt"># Contas com PasswordNeverExpires — alta probabilidade de senha fraca antiga</span>
+<span class="cmd">Get-ADUser</span> <span class="kw">-Filter</span> { PasswordNeverExpires <span class="kw">-eq</span> <span class="kw">$true</span> } <span class="kw">-Properties</span> PasswordLastSet
+
+<span class="cmt"># AdminSDHolder — contas protegidas (alto valor)</span>
+<span class="cmd">Get-ADUser</span> <span class="kw">-LDAPFilter</span> <span class="str">"(adminCount=1)"</span> <span class="kw">-Properties</span> adminCount, MemberOf</pre>
+        </div>
+
+        <h3>Achados Simulados</h3>
+        <table class="detect-table">
+          <tr><th>Conta</th><th>Grupo/Atributo</th><th>Interesse para o Ator</th></tr>
+          <tr><td><code>administrador</code></td><td>Domain Admins</td><td>Controle total do domínio</td></tr>
+          <tr><td><code>svc_sql</code></td><td>SPN: MSSQLSvc/DC01</td><td>Alvo de Kerberoasting</td></tr>
+          <tr><td><code>svc_backup</code></td><td>SeBackupPrivilege</td><td>Leitura de NTDS.dit</td></tr>
+          <tr><td><code>jsmith</code></td><td>PasswordNeverExpires=True</td><td>Senha potencialmente fraca/antiga</td></tr>
+        </table>
+
+        <div class="cti-box" style="margin-top:14px; border-color: rgba(255,68,68,0.25); background: rgba(255,68,68,0.04);">
+          <div class="cti-label" style="color:var(--danger);">Gap de Detecção</div>
+          <p>Toda esta enumeração via <code>Get-ADUser</code> e <code>Get-ADGroupMember</code> gerou <strong>zero alertas</strong>. São operações LDAP normais, autorizadas para qualquer usuário autenticado por padrão no AD. A detecção requer baselining de volume: quantas queries LDAP um usuário normalmente faz por hora? Uma explosão de 50+ queries em 3 minutos é anomalia comportamental, não violação de regra.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FASE 6 — THREAT HUNTING -->
+  <div class="block">
+    <div class="section-label">Fase 06 / 06</div>
+    <h2>Threat Hunting — Fechando o Loop</h2>
+
+    <p>Com as fases anteriores documentadas, o hunting parte de hipóteses concretas derivadas do comportamento simulado. Cada hipótese tem uma query testável.</p>
+
+    <div class="hunt-card">
+      <div class="hunt-h">Hipótese H-01</div>
+      <div class="hunt-hyp">Conta de serviço autenticou via RDP em host diferente do esperado em horário off-hours</div>
+      <div class="code-block" style="margin:0">
+        <div class="cb-label"><span class="cb-dot cb-dot-log"></span>KQL — Wazuh / Elastic</div>
+        <pre><span class="kw">event.code:</span><span class="val">"4624"</span>
+<span class="kw">AND</span> winlog.event_data.LogonType:<span class="val">"10"</span>
+<span class="kw">AND</span> winlog.event_data.TargetUserName:<span class="val">"svc_*"</span>
+<span class="kw">AND NOT</span> winlog.event_data.WorkstationName:(<span class="str">"WS01"</span> <span class="kw">OR</span> <span class="str">"WS02"</span>)
+<span class="kw">AND</span> @timestamp:[<span class="str">"00:00"</span> <span class="kw">TO</span> <span class="str">"06:00"</span>]</pre>
+      </div>
+    </div>
+
+    <div class="hunt-card">
+      <div class="hunt-h">Hipótese H-02</div>
+      <div class="hunt-hyp">PowerShell com -EncodedCommand criou scheduled task em namespace do sistema</div>
+      <div class="code-block" style="margin:0">
+        <div class="cb-label"><span class="cb-dot cb-dot-log"></span>Sigma Rule (simplificada)</div>
+        <pre><span class="kw">title:</span> Scheduled Task Created With Encoded PowerShell
+<span class="kw">logsource:</span>
+  <span class="kw">product:</span> windows
+  <span class="kw">service:</span> security
+<span class="kw">detection:</span>
+  <span class="kw">selection:</span>
+    <span class="kw">EventID:</span> <span class="val">4698</span>
+    <span class="kw">TaskContent|contains|all:</span>
+      - <span class="str">'EncodedCommand'</span>
+      - <span class="str">'Hidden'</span>
+      - <span class="str">'NonInteractive'</span>
+  <span class="kw">filter_legit:</span>
+    <span class="kw">SubjectUserName|startswith:</span> <span class="str">'svc_sched'</span>   <span class="cmt"># conta autorizada</span>
+  <span class="kw">condition:</span> selection <span class="kw">and not</span> filter_legit
+<span class="kw">level:</span> high</pre>
+      </div>
+    </div>
+
+    <div class="hunt-card">
+      <div class="hunt-h">Hipótese H-03</div>
+      <div class="hunt-hyp">Explosão de queries LDAP por conta não-administrativa em curto intervalo</div>
+      <div class="code-block" style="margin:0">
+        <div class="cb-label"><span class="cb-dot cb-dot-log"></span>KQL — Correlação temporal</div>
+        <pre><span class="kw">event.code:</span><span class="val">"4662"</span>                    <span class="cmt">// Object Access no AD</span>
+<span class="kw">AND</span> winlog.event_data.ObjectType:<span class="val">"user"</span>
+<span class="kw">AND NOT</span> user.name:(<span class="str">"administrador"</span> <span class="kw">OR</span> <span class="str">"svc_ad_mgmt"</span>)
+<span class="cmt">// Agrupar por user.name, contar em janela de 5 minutos</span>
+<span class="cmt">// Threshold: count > 20 → alerta</span>
+| <span class="cmd">stats</span> count() <span class="kw">by</span> user.name, <span class="cmd">date_histogram</span>(field=<span class="str">"@timestamp"</span>, <span class="kw">fixed_interval</span>=<span class="str">"5m"</span>)
+| <span class="kw">where</span> count > <span class="val">20</span></pre>
+      </div>
+    </div>
+
+    <div class="hunt-card">
+      <div class="hunt-h">Hipótese H-04</div>
+      <div class="hunt-hyp">nltest.exe ou net.exe executado por conta não-admin fora do horário de helpdesk</div>
+      <div class="code-block" style="margin:0">
+        <div class="cb-label"><span class="cb-dot cb-dot-log"></span>KQL — Process Creation</div>
+        <pre><span class="kw">event.code:</span><span class="val">"1"</span>                       <span class="cmt">// Sysmon Process Create</span>
+<span class="kw">AND</span> process.name:(<span class="str">"nltest.exe"</span> <span class="kw">OR</span> <span class="str">"net.exe"</span> <span class="kw">OR</span> <span class="str">"net1.exe"</span>)
+<span class="kw">AND</span> process.command_line:(<span class="str">"*dclist*"</span> <span class="kw">OR</span> <span class="str">"*domain_trusts*"</span> <span class="kw">OR</span> <span class="str">"*view*"</span>)
+<span class="kw">AND NOT</span> user.name:(<span class="str">"administrador"</span> <span class="kw">OR</span> <span class="str">"svc_monitoring"</span>)
+<span class="kw">AND</span> @timestamp:[<span class="str">"18:00"</span> <span class="kw">TO</span> <span class="str">"08:00"</span>]</pre>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- CONCLUSÃO -->
+  <div class="block">
+    <div class="section-label">Conclusão</div>
+    <h2>O Que Este Lab Demonstrou</h2>
+
+    <div class="conclusion-grid">
+      <div class="concl-card">
+        <div class="concl-num" style="color:var(--danger)">4/6</div>
+        <div class="concl-label">Fases sem alerta no Wazuh default</div>
+      </div>
+      <div class="concl-card">
+        <div class="concl-num" style="color:var(--warn)">4</div>
+        <div class="concl-label">Hipóteses de hunting geradas</div>
+      </div>
+      <div class="concl-card">
+        <div class="concl-num" style="color:var(--accent3)">0</div>
+        <div class="concl-label">Binários externos dropados pelo "ator"</div>
+      </div>
+    </div>
+
+    <p>O Salt Typhoon demonstra que a fronteira entre administrador legítimo e ator malicioso <strong>não está nos comandos executados, mas no contexto em que são executados</strong>. Quatro das seis fases simuladas passaram sem nenhum alerta no Wazuh com configuração padrão — não por falha da ferramenta, mas porque as ações eram tecnicamente indistinguíveis do comportamento normal.</p>
+
+    <p>Os achados centrais são três: primeiro, o Wazuh captura a telemetria correta via Sysmon, mas falta correlação temporal e comportamental entre eventos; segundo, o Windows Server 2025 bloqueou ativamente técnicas legadas (RC4, SMB unsigned), forçando o ator simulado a adaptar tooling — isso é uma postura defensiva real, não um obstáculo ao lab; terceiro, a detecção eficaz contra LOTL exige baselining comportamental, não apenas regras baseadas em assinatura.</p>
+
+    <div class="cti-box" style="margin-top:20px">
+      <div class="cti-label">Recomendações para o Ambiente</div>
+      <ul style="margin:0">
+        <li>Habilitar auditoria de <strong>LDAP Query Logging</strong> no DC (Event 1644) para visibilidade de enumeração AD</li>
+        <li>Criar regras de correlação Wazuh para cadeia 4624+4648+4672 por service accounts</li>
+        <li>Implementar baselining de uso de PowerShell por conta (volume de comandos/hora)</li>
+        <li>Alertar em qualquer EID 4698 com <code>EncodedCommand</code> no TaskContent</li>
+        <li>Restringir <code>Get-ADGroupMember</code> sobre grupos sensíveis via ACL no AD</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>TLOA Framework · Adversary Emulation Lab</span>
+  <span>Salt Typhoon / TAG-22 / GhostEmperor</span>
+  <span style="margin-left:auto; color: var(--text-dim)">github.com/Higor1912 · linkedin.com/in/higor-silvasec</span>
+</div>
+
+</body>
+</html>

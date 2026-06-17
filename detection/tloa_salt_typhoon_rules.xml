@@ -1,0 +1,342 @@
+<!--
+  ============================================================
+  TLOA Framework — Wazuh Custom Rules (v1.1 — CORRIGIDO)
+  Adversary Profile : Salt Typhoon (TAG-22 / GhostEmperor)
+  Arquivo           : /var/ossec/etc/rules/tloa_salt_typhoon_rules.xml
+
+  CORREÇÕES v1.1
+  ───────────────
+  - IDs migrados de 100001-100150 para 110001-110150
+    (evita conflito com local_rules.xml ID 100001)
+  - Removido <timeframe> das regras de correlação
+    (não suportado no Wazuh 4.7.x fora de contexto frequency)
+  - Correlação via <if_matched_sid> + <same_field> mantida
+  ============================================================
+-->
+
+<group name="tloa,salt_typhoon,">
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 1 — RECONHECIMENTO (T1018, T1046)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110001" level="10">
+    <if_sid>61603</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell(\.exe)?$</field>
+    <description>RECON: PowerShell iniciou conexao de rede - possivel port scan LOTL (T1046)</description>
+    <mitre>
+      <id>T1046</id>
+      <id>T1059.001</id>
+    </mitre>
+    <group>recon,lotl,network_connection,t1046,</group>
+  </rule>
+
+  <rule id="110002" level="10">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)nltest\.exe$</field>
+    <description>RECON: nltest.exe executado - enumeracao de Domain Controllers (T1018)</description>
+    <mitre>
+      <id>T1018</id>
+      <id>T1482</id>
+    </mitre>
+    <group>recon,ad_enum,t1018,</group>
+  </rule>
+
+  <rule id="110003" level="12">
+    <if_sid>110002</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(dclist|domain_trusts|dsgetdc|parentdomain)</field>
+    <description>RECON HIGH: nltest com argumento de enumeracao de dominio - alta confianca (T1018)</description>
+    <mitre>
+      <id>T1018</id>
+      <id>T1482</id>
+    </mitre>
+    <group>recon,ad_enum,t1018,high_confidence,</group>
+  </rule>
+
+  <rule id="110004" level="10">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)net(1)?\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(view|group|user|localgroup|accounts|share)</field>
+    <description>RECON: net.exe com argumento de enumeracao de rede/AD (T1018/T1087)</description>
+    <mitre>
+      <id>T1018</id>
+      <id>T1087</id>
+    </mitre>
+    <group>recon,ad_enum,lotl,t1087,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 2 — LIVING OFF THE LAND (T1059.001)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110010" level="10">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell(\.exe)?$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-NonI|-NonInteractive|-WindowStyle\s+[Hh]idden|-NoP|-NoPr|-NoProfile)</field>
+    <description>LOTL: PowerShell executado com flags de evasao (NonInteractive/Hidden/NoProfile)</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>lotl,powershell,evasion,t1059_001,</group>
+  </rule>
+
+  <rule id="110011" level="12">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell(\.exe)?$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(-Enc|-EncodedC|-EncodedCommand)</field>
+    <description>LOTL HIGH: PowerShell com EncodedCommand - possivel ofuscacao de payload (T1059.001)</description>
+    <mitre>
+      <id>T1059.001</id>
+      <id>T1027</id>
+    </mitre>
+    <group>lotl,powershell,obfuscation,t1059_001,t1027,high_confidence,</group>
+  </rule>
+
+  <rule id="110012" level="10">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell(\.exe)?$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(Get-ADUser|Get-ADGroup|Get-ADComputer|Get-ADDomain|Get-ADForest|Get-ADTrust|Get-GPO|Get-ADGroupMember)</field>
+    <description>LOTL: PowerShell executando cmdlets de enumeracao AD (T1087/T1482)</description>
+    <mitre>
+      <id>T1087.002</id>
+      <id>T1482</id>
+    </mitre>
+    <group>lotl,ad_enum,powershell,t1087,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 3 — CREDENCIAIS VALIDAS (T1078)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110020" level="12">
+    <if_sid>60106</if_sid>
+    <field name="win.eventdata.logonType">^10$</field>
+    <field name="win.eventdata.targetUserName" type="pcre2">(?i)^svc_</field>
+    <description>CRED: Service account autenticou via RDP (LogonType 10) - (T1078)</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>credential_abuse,rdp,service_account,t1078,</group>
+  </rule>
+
+  <rule id="110021" level="10">
+    <if_sid>60107</if_sid>
+    <field name="win.eventdata.targetUserName" type="pcre2">(?i)^svc_</field>
+    <description>CRED: Logon com credenciais explicitas para service account (EID 4648 - T1078)</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>credential_abuse,explicit_creds,t1078,</group>
+  </rule>
+
+  <rule id="110022" level="12">
+    <if_sid>60108</if_sid>
+    <field name="win.eventdata.subjectUserName" type="pcre2">(?i)^svc_</field>
+    <description>CRED: Privilegio especial atribuido a service account (T1078)</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>credential_abuse,privilege,t1078,</group>
+  </rule>
+
+  <rule id="110023" level="10">
+    <if_sid>60106</if_sid>
+    <field name="win.eventdata.logonType">^10$</field>
+    <field name="win.eventdata.workstationName" type="pcre2">(?i)^(?!WS01|WS02|DC01).+</field>
+    <description>CRED: Logon RDP originado de workstation nao mapeada no ambiente (T1078)</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>credential_abuse,rdp,unknown_host,t1078,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 4 — PERSISTENCIA (T1053.005)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110030" level="10">
+    <if_sid>60144</if_sid>
+    <description>PERSIST: Nova scheduled task criada - revisar contexto (T1053.005)</description>
+    <mitre>
+      <id>T1053.005</id>
+    </mitre>
+    <group>persistence,scheduled_task,t1053,</group>
+  </rule>
+
+  <rule id="110031" level="14">
+    <if_sid>110030</if_sid>
+    <field name="win.eventdata.taskContent" type="pcre2">(?i)(EncodedCommand|EncodedC|-Enc\b)</field>
+    <description>PERSIST HIGH: Scheduled task com payload PowerShell ofuscado (EncodedCommand) - T1053.005</description>
+    <mitre>
+      <id>T1053.005</id>
+      <id>T1027</id>
+    </mitre>
+    <group>persistence,scheduled_task,obfuscation,t1053,high_confidence,</group>
+  </rule>
+
+  <rule id="110032" level="12">
+    <if_sid>110030</if_sid>
+    <field name="win.eventdata.taskContent" type="pcre2">(?i)(WindowStyle\s+Hidden|NonInteractive|NoProfile)</field>
+    <description>PERSIST: Scheduled task com PowerShell em modo oculto/nao-interativo (T1053.005)</description>
+    <mitre>
+      <id>T1053.005</id>
+      <id>T1059.001</id>
+    </mitre>
+    <group>persistence,scheduled_task,evasion,t1053,</group>
+  </rule>
+
+  <rule id="110033" level="12">
+    <if_sid>110030</if_sid>
+    <field name="win.eventdata.taskName" type="pcre2">(?i)\\Microsoft\\Windows\\(Maintenance|Diagnosis|Defrag|DiskCleanup|UpdateOrchestrator)</field>
+    <field name="win.eventdata.subjectUserName" type="pcre2">(?i)^(?!SYSTEM$|LOCAL SERVICE$|NETWORK SERVICE$).+</field>
+    <description>PERSIST: Scheduled task criada por usuario em namespace do sistema - possivel masquerading (T1036)</description>
+    <mitre>
+      <id>T1053.005</id>
+      <id>T1036</id>
+    </mitre>
+    <group>persistence,scheduled_task,masquerading,t1053,t1036,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 5 — ENUMERACAO DE CONTAS (T1087.002)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110040" level="10">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.image" type="pcre2">(?i)powershell(\.exe)?$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(Domain Admins|Enterprise Admins|Schema Admins|Account Operators|Backup Operators)</field>
+    <description>ENUM: Enumeracao de grupos privilegiados do AD via PowerShell (T1087.002)</description>
+    <mitre>
+      <id>T1087.002</id>
+    </mitre>
+    <group>ad_enum,privileged_groups,t1087,</group>
+  </rule>
+
+  <rule id="110041" level="12">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(ServicePrincipalName|SPN|\-LDAPFilter.*servicePrincipal)</field>
+    <description>ENUM HIGH: Enumeracao de SPNs - possivel preparacao para Kerberoasting (T1558.003)</description>
+    <mitre>
+      <id>T1087.002</id>
+      <id>T1558.003</id>
+    </mitre>
+    <group>ad_enum,kerberoasting,t1087,t1558,high_confidence,</group>
+  </rule>
+
+  <rule id="110042" level="12">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(adminCount\s*=\s*1|AdminSDHolder|\-LDAPFilter.*adminCount)</field>
+    <description>ENUM HIGH: Enumeracao de contas com adminCount=1 - alvos de alto valor (T1087.002)</description>
+    <mitre>
+      <id>T1087.002</id>
+    </mitre>
+    <group>ad_enum,high_value_targets,t1087,high_confidence,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 6 — ACESSO A CREDENCIAIS (T1003.001)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110050" level="14">
+    <if_sid>61632</if_sid>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe$</field>
+    <description>CRED DUMP: Processo acessando lsass.exe - possivel credential dumping (T1003.001)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_dumping,lsass,t1003,high_confidence,</group>
+  </rule>
+
+  <rule id="110051" level="15">
+    <if_sid>110050</if_sid>
+    <field name="win.eventdata.sourceImage" type="pcre2">(?i)^(?!C:\\Windows\\System32\\(lsass|svchost|csrss|wininit|services)\.exe).+</field>
+    <description>CRED DUMP CRITICO: Processo nao-sistema acessando lsass.exe - alta probabilidade de dump (T1003.001)</description>
+    <mitre>
+      <id>T1003.001</id>
+    </mitre>
+    <group>credential_dumping,lsass,t1003,critical,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 7 — PERSISTENCIA VIA REGISTRY (T1547.001)
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110060" level="12">
+    <if_sid>61640</if_sid>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\CurrentVersion\\Run(Once)?</field>
+    <description>PERSIST: Modificacao em Run Key do registry - possivel persistencia (T1547.001)</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>persistence,registry,run_key,t1547,</group>
+  </rule>
+
+  <rule id="110061" level="14">
+    <if_sid>110060</if_sid>
+    <field name="win.eventdata.details" type="pcre2">(?i)(\\Temp\\|\\AppData\\|\\ProgramData\\|powershell|cmd\.exe|wscript|cscript|mshta|rundll32)</field>
+    <description>PERSIST HIGH: Run Key aponta para path suspeito ou interpretador de script (T1547.001)</description>
+    <mitre>
+      <id>T1547.001</id>
+    </mitre>
+    <group>persistence,registry,run_key,suspicious_path,t1547,high_confidence,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 8 — CORRELACAO DE CADEIA
+       Wazuh 4.7.x: correlacao via if_matched_sid + frequency
+       Timeframe nao suportado em regras simples — removido
+  ════════════════════════════════════════════════════════ -->
+
+  <!-- Marcador: logon RDP de service account -->
+  <rule id="110100" level="3">
+    <if_sid>110020</if_sid>
+    <description>MARKER: Logon RDP de service account registrado para correlacao</description>
+    <group>correlation_marker,t1078,</group>
+  </rule>
+
+  <!-- Correlacao: mesmo usuario cria scheduled task apos logon suspeito -->
+  <rule id="110101" level="15" frequency="2" timeframe="7200">
+    <if_matched_sid>110100</if_matched_sid>
+    <same_field>win.eventdata.subjectUserName</same_field>
+    <description>CAMPANHA: Service account com logon RDP suspeito seguido de scheduled task ofuscada - Salt Typhoon TTP Chain (T1078 + T1053.005)</description>
+    <mitre>
+      <id>T1078</id>
+      <id>T1053.005</id>
+    </mitre>
+    <group>apt,salt_typhoon,campaign,t1078,t1053,critical,</group>
+  </rule>
+
+  <!-- Marcador: enumeracao de SPNs -->
+  <rule id="110110" level="3">
+    <if_sid>110041</if_sid>
+    <description>MARKER: Enumeracao de SPN registrada para correlacao</description>
+    <group>correlation_marker,t1087,</group>
+  </rule>
+
+  <!-- Correlacao: acesso ao LSASS apos enum de SPN no mesmo host -->
+  <rule id="110111" level="15" frequency="2" timeframe="3600">
+    <if_matched_sid>110110</if_matched_sid>
+    <same_field>win.system.computer</same_field>
+    <description>CAMPANHA: Enumeracao de SPN seguida de acesso ao LSASS - possivel Kerberoasting + credential dump (T1087 + T1003.001)</description>
+    <mitre>
+      <id>T1087.002</id>
+      <id>T1003.001</id>
+    </mitre>
+    <group>apt,salt_typhoon,campaign,t1558,t1003,critical,</group>
+  </rule>
+
+  <!-- ════════════════════════════════════════════════════════
+       BLOCO 9 — INDICADOR DE CAMPANHA ATIVA
+  ════════════════════════════════════════════════════════ -->
+
+  <rule id="110150" level="15" frequency="3" timeframe="3600">
+    <if_matched_group>salt_typhoon</if_matched_group>
+    <same_field>win.system.computer</same_field>
+    <description>CAMPANHA ATIVA: 3+ indicadores Salt Typhoon no mesmo host em 1h - investigacao imediata</description>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+    <group>apt,salt_typhoon,campaign,critical,</group>
+  </rule>
+
+</group>

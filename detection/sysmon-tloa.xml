@@ -1,0 +1,262 @@
+<Sysmon schemaversion="4.90">
+  <!--
+    ============================================================
+    TLOA Framework — Sysmon Configuration
+    Adversary Profile : Salt Typhoon (TAG-22 / GhostEmperor)
+    Lab               : DC01 / WS01 / Kali — tloa.local
+    Wazuh             : 4.7.5
+    Autor             : TLOA Framework (higor-silvasec)
+    Versão            : 1.0
+    ============================================================
+
+    FILOSOFIA DE TUNING
+    ───────────────────
+    Padrão SwiftOnSecurity como base, com três camadas de ajuste:
+      1. Incluir explicitamente o que o default exclui para LOTL/AD recon
+      2. Excluir ruído de processos legítimos conhecidos no ambiente TLOA
+      3. Capturar campos completos (CommandLine, ParentImage) para correlação
+
+    COBERTURA DE GAPS (Salt Typhoon Lab)
+    ─────────────────────────────────────
+    Gap 1  — Port scan via TcpClient (PowerShell) → EID 3
+    Gap 2  — LOTL AD recon (Get-ADUser, nltest)   → EID 1 + CommandLine
+    Gap 3  — RDP de host incomum                  → EID 3 (porta 3389)
+    Gap 4  — Scheduled task com EncodedCommand     → EID 1 + EID 11
+    Gap 5  — Enumeração LDAP em volume             → EID 1 + EID 3
+  -->
+
+  <EventFiltering>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 1 — PROCESS CREATION
+         Captura CommandLine completo + ParentImage
+         Crítico para: LOTL, nltest, net.exe, PowerShell -Encoded
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="ProcessCreate" groupRelation="or">
+      <ProcessCreate onmatch="exclude">
+
+        <!-- Ruído de sistema — processos legítimos frequentes -->
+        <Image condition="is">C:\Windows\System32\WerFault.exe</Image>
+        <Image condition="is">C:\Windows\System32\wermgr.exe</Image>
+        <Image condition="is">C:\Windows\System32\backgroundTaskHost.exe</Image>
+        <Image condition="is">C:\Windows\System32\spoolsv.exe</Image>
+        <Image condition="is">C:\Windows\System32\svchost.exe</Image>
+        <Image condition="is">C:\Windows\System32\SearchIndexer.exe</Image>
+        <Image condition="is">C:\Windows\System32\MpSigStub.exe</Image>
+
+        <!-- Windows Update — alto volume, baixo interesse -->
+        <Image condition="begin with">C:\Windows\SoftwareDistribution\</Image>
+        <Image condition="begin with">C:\Windows\WinSxS\</Image>
+
+        <!-- Wazuh Agent — evitar loop de auto-monitoramento -->
+        <Image condition="begin with">C:\Program Files (x86)\ossec-agent\</Image>
+        <Image condition="begin with">C:\Program Files\ossec-agent\</Image>
+
+        <!-- NOTA: NÃO excluir powershell.exe, cmd.exe, nltest.exe,
+             net.exe, schtasks.exe — são alvos de monitoramento -->
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 2 — FILE CREATION TIME CHANGED
+         Detecta timestomping (T1070.006)
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="FileCreateTime" groupRelation="or">
+      <FileCreateTime onmatch="include">
+        <!-- Qualquer mudança de timestamp em paths de sistema -->
+        <TargetFilename condition="begin with">C:\Windows\System32\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Windows\SysWOW64\</TargetFilename>
+        <TargetFilename condition="begin with">C:\ProgramData\</TargetFilename>
+      </FileCreateTime>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 3 — NETWORK CONNECTION
+         GAP CRÍTICO: default exclui PowerShell e muitos processos
+         Precisamos capturar conexões de processos LOTL para recon
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="NetworkConnect" groupRelation="or">
+      <NetworkConnect onmatch="include">
+
+        <!-- PowerShell fazendo conexões de rede — recon LOTL, C2 -->
+        <Image condition="is">C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe</Image>
+        <Image condition="is">C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe</Image>
+        <Image condition="is">C:\Windows\System32\pwsh.exe</Image>
+
+        <!-- CMD iniciando conexões (net view, net use) -->
+        <Image condition="is">C:\Windows\System32\cmd.exe</Image>
+
+        <!-- Ferramentas de recon AD nativas -->
+        <Image condition="is">C:\Windows\System32\nltest.exe</Image>
+        <Image condition="is">C:\Windows\System32\net.exe</Image>
+        <Image condition="is">C:\Windows\System32\net1.exe</Image>
+
+        <!-- MSTSC — RDP iniciado de processo suspeito -->
+        <Image condition="is">C:\Windows\System32\mstsc.exe</Image>
+
+        <!-- WinRM / Evil-WinRM (lateral movement) -->
+        <DestinationPort condition="is">5985</DestinationPort>
+        <DestinationPort condition="is">5986</DestinationPort>
+
+        <!-- Kerberos / LDAP / SMB — portas de AD recon -->
+        <DestinationPort condition="is">88</DestinationPort>
+        <DestinationPort condition="is">389</DestinationPort>
+        <DestinationPort condition="is">636</DestinationPort>
+        <DestinationPort condition="is">445</DestinationPort>
+        <DestinationPort condition="is">3268</DestinationPort>
+
+        <!-- RDP para hosts internos -->
+        <DestinationPort condition="is">3389</DestinationPort>
+
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 5 — PROCESS TERMINATED
+         Útil para detectar processos de recon de curta duração
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="ProcessTerminate" groupRelation="or">
+      <ProcessTerminate onmatch="include">
+        <Image condition="is">C:\Windows\System32\nltest.exe</Image>
+        <Image condition="is">C:\Windows\System32\net.exe</Image>
+        <Image condition="is">C:\Windows\System32\whoami.exe</Image>
+        <Image condition="is">C:\Windows\System32\ipconfig.exe</Image>
+      </ProcessTerminate>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 7 — IMAGE LOADED (DLL)
+         Detecta carregamento de DLLs suspeitas por processos legítimos
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="ImageLoad" groupRelation="or">
+      <ImageLoad onmatch="include">
+        <!-- DLLs de credential access carregadas por processos suspeitos -->
+        <ImageLoaded condition="is">C:\Windows\System32\samlib.dll</ImageLoaded>
+        <ImageLoaded condition="is">C:\Windows\System32\vaultcli.dll</ImageLoaded>
+        <ImageLoaded condition="is">C:\Windows\System32\wdigest.dll</ImageLoaded>
+
+        <!-- DLL carregada de path fora de System32 -->
+        <ImageLoaded condition="begin with">C:\Users\</ImageLoaded>
+        <ImageLoaded condition="begin with">C:\ProgramData\</ImageLoaded>
+        <ImageLoaded condition="begin with">C:\Temp\</ImageLoaded>
+      </ImageLoad>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 8 — CREATE REMOTE THREAD
+         Detecta injeção de processo (T1055)
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="CreateRemoteThread" groupRelation="or">
+      <CreateRemoteThread onmatch="exclude">
+        <!-- Falso positivo conhecido: Chrome e browsers -->
+        <SourceImage condition="begin with">C:\Program Files\Google\Chrome\</SourceImage>
+        <SourceImage condition="begin with">C:\Program Files (x86)\Microsoft\Edge\</SourceImage>
+      </CreateRemoteThread>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 10 — PROCESS ACCESS
+         Detecta acesso ao LSASS (credential dumping T1003)
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="ProcessAccess" groupRelation="or">
+      <ProcessAccess onmatch="include">
+        <!-- Qualquer processo acessando LSASS -->
+        <TargetImage condition="is">C:\Windows\system32\lsass.exe</TargetImage>
+      </ProcessAccess>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 11 — FILE CREATE
+         Detecta criação de arquivos em paths de persistência
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="FileCreate" groupRelation="or">
+      <FileCreate onmatch="include">
+
+        <!-- Paths clássicos de dropping de payload -->
+        <TargetFilename condition="begin with">C:\Users\</TargetFilename>
+        <TargetFilename condition="begin with">C:\ProgramData\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Temp\</TargetFilename>
+        <TargetFilename condition="begin with">C:\Windows\Temp\</TargetFilename>
+
+        <!-- Scripts criados em qualquer lugar -->
+        <TargetFilename condition="end with">.ps1</TargetFilename>
+        <TargetFilename condition="end with">.bat</TargetFilename>
+        <TargetFilename condition="end with">.vbs</TargetFilename>
+        <TargetFilename condition="end with">.hta</TargetFilename>
+
+        <!-- Startup folders — persistência T1547 -->
+        <TargetFilename condition="contains">Startup</TargetFilename>
+
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 12/13/14 — REGISTRY CREATE/SET/DELETE
+         Detecta Run Keys (T1547.001) e outras persistências
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="RegistryEvent" groupRelation="or">
+      <RegistryEvent onmatch="include">
+
+        <!-- Run Keys — persistência clássica -->
+        <TargetObject condition="contains">CurrentVersion\Run</TargetObject>
+        <TargetObject condition="contains">CurrentVersion\RunOnce</TargetObject>
+        <TargetObject condition="contains">CurrentVersion\RunOnceEx</TargetObject>
+
+        <!-- WinLogon — hijacking de logon -->
+        <TargetObject condition="contains">Winlogon\Userinit</TargetObject>
+        <TargetObject condition="contains">Winlogon\Shell</TargetObject>
+
+        <!-- Serviços criados/modificados -->
+        <TargetObject condition="begin with">HKLM\System\CurrentControlSet\Services\</TargetObject>
+
+        <!-- Desabilitação de segurança via registry -->
+        <TargetObject condition="contains">DisableAntiSpyware</TargetObject>
+        <TargetObject condition="contains">DisableRealtimeMonitoring</TargetObject>
+
+        <!-- AMSI Bypass via registry -->
+        <TargetObject condition="contains">HKLM\SOFTWARE\Microsoft\AMSI</TargetObject>
+
+      </RegistryEvent>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 15 — FILE CREATE STREAM HASH (ADS)
+         Detecta Alternate Data Streams (T1564.004)
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="FileCreateStreamHash" groupRelation="or">
+      <FileCreateStreamHash onmatch="include">
+        <TargetFilename condition="contains">:</TargetFilename>
+      </FileCreateStreamHash>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 17/18 — PIPE CREATE/CONNECT
+         Detecta named pipes usados por ferramentas ofensivas
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="PipeEvent" groupRelation="or">
+      <PipeEvent onmatch="include">
+        <!-- Pipes conhecidos de C2 e ferramentas ofensivas -->
+        <PipeName condition="contains">msagent_</PipeName>
+        <PipeName condition="contains">mojo.</PipeName>
+        <PipeName condition="contains">postex_</PipeName>
+        <PipeName condition="is">\samr</PipeName>
+        <PipeName condition="is">\lsarpc</PipeName>
+      </PipeEvent>
+    </RuleGroup>
+
+    <!-- ══════════════════════════════════════════════════════
+         EID 22 — DNS QUERY
+         Detecta beaconing e resolução de C2
+    ══════════════════════════════════════════════════════ -->
+    <RuleGroup name="DnsQuery" groupRelation="or">
+      <DnsQuery onmatch="exclude">
+        <!-- Excluir resolução interna normal do lab -->
+        <QueryName condition="end with">.tloa.local</QueryName>
+        <!-- Windows Update — alto volume -->
+        <QueryName condition="end with">.windowsupdate.com</QueryName>
+        <QueryName condition="end with">.microsoft.com</QueryName>
+      </DnsQuery>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>
