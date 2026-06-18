@@ -14,7 +14,7 @@ Este repositório documenta a simulação das principais TTPs do **Salt Typhoon*
 
 O lab é parte do **TLOA Framework** — metodologia de auditoria ofensiva orientada por ameaças reais.
 
-📄 **Post completo no Medium:** [Salt Typhoon no Home Lab: como simular espionagem persistente e (finalmente) detectá-la](#) *(link após publicação)*
+📄 **Post completo no Medium:** https://medium.com/@higorsilva1816/salt-typhoon-no-home-lab-como-simular-espionagem-persistente-e-finalmente-detect%C3%A1-la-8376593522a8
 
 ---
 
