@@ -119,8 +119,7 @@ This repository documents the simulation of **Salt Typhoon** (TAG-22 / GhostEmpe
 
 Part of the **TLOA Framework** — a threat-led offensive audit methodology.
 
-📄 **Full write-up on Medium:** [Salt Typhoon in the Home Lab: Simulating Persistent Espionage and (Finally) Detecting It](#) *(link after publication)*
-
+📄 **Full write-up on Medium:** https://medium.com/@higorsilva1816/salt-typhoon-no-home-lab-como-simular-espionagem-persistente-e-finalmente-detect%C3%A1-la-8376593522a8
 ---
 
 ### TTPs Covered
